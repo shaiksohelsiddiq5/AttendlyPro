@@ -13,6 +13,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
+  bool _obscureLoginPassword = true;
+  bool _obscureResetPassword = true;
 
   final rollController = TextEditingController();
 
@@ -200,12 +202,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: newPasswordController,
-                        obscureText: true,
+                        obscureText: _obscureResetPassword,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: "New Password",
-                          labelStyle: TextStyle(color: Colors.white70),
-                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureResetPassword ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureResetPassword = !_obscureResetPassword;
+                              });
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -330,14 +343,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: _obscureLoginPassword,
                   style: const TextStyle(color: Colors.black),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
                     hintText: "Password",
-                    hintStyle: TextStyle(color: Colors.black54),
-                    border: OutlineInputBorder(),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureLoginPassword ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.black54,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureLoginPassword = !_obscureLoginPassword;
+                        });
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),

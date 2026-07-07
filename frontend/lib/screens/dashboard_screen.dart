@@ -32,6 +32,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loadingDateData = false;
   bool _isCustomDateSelected = false;
 
+  // Smart Productivity Platform State Variables
+  int _pendingAssignmentsCount = 0;
+  int _totalNotesCount = 0;
+  int _todayStudyGoalsCount = 0;
+  int _todayStudyGoalsCompleted = 0;
+  double _studyGoalsCompletion = 0.0;
+  int _upcomingExamsCount = 0;
+  int _totalNoticesCount = 0;
+  String _latestNoticeTitle = "No Notice";
+  int _pendingTasksCount = 0;
+  List _latestNotices = [];
+  List _recentNotes = [];
+  double _currentCgpa = 0.0;
+  int _unlockedAchievementsCount = 0;
+  int _upcomingEventsCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -217,6 +233,120 @@ class _DashboardScreenState extends State<DashboardScreen> {
         upcomingExs.sort((a, b) => (a['date']?.toString() ?? '').compareTo(b['date']?.toString() ?? ''));
       }
 
+      // 6. Fetch pending assignments
+      int pendingAssignments = 0;
+      try {
+        final assignmentsRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/assignments/$rollNo"));
+        if (assignmentsRes.statusCode == 200) {
+          final List list = jsonDecode(assignmentsRes.body) as List;
+          pendingAssignments = list.where((a) => a['status'] == 'Pending').length;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch assignments: $e");
+      }
+
+      // 7. Fetch study planner goals
+      double goalsCompletion = 0.0;
+      int studyGoalsTotal = 0;
+      int studyGoalsCompleted = 0;
+      try {
+        final studyRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/study-plans/$rollNo"));
+        if (studyRes.statusCode == 200) {
+          final List plans = jsonDecode(studyRes.body) as List;
+          final todayGoals = plans.where((p) => p['date'] == dateStr).toList();
+          studyGoalsTotal = todayGoals.length;
+          studyGoalsCompleted = todayGoals.where((g) => g['completed'] == true).length;
+          goalsCompletion = studyGoalsTotal == 0 ? 0.0 : studyGoalsCompleted / studyGoalsTotal;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch study goals: $e");
+      }
+
+      // 8. Fetch latest notices
+      List noticesList = [];
+      try {
+        final noticesRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/notices"));
+        if (noticesRes.statusCode == 200) {
+          noticesList = jsonDecode(noticesRes.body) as List;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch notices: $e");
+      }
+
+      // 9. Fetch recent notes
+      List notesList = [];
+      try {
+        final notesRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/notes/$rollNo"));
+        if (notesRes.statusCode == 200) {
+          notesList = jsonDecode(notesRes.body) as List;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch notes: $e");
+      }
+
+      // 10. Fetch pending tasks
+      int pendingTasks = 0;
+      try {
+        final tasksRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/tasks/$rollNo"));
+        if (tasksRes.statusCode == 200) {
+          final List list = jsonDecode(tasksRes.body) as List;
+          pendingTasks = list.where((t) => t['completed'] == false).length;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch tasks: $e");
+      }
+
+      // 11. Fetch upcoming events count
+      int upcomingEvents = 0;
+      try {
+        final eventsRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/events"));
+        if (eventsRes.statusCode == 200) {
+          final List list = jsonDecode(eventsRes.body) as List;
+          final now = DateTime.now();
+          upcomingEvents = list.where((e) {
+            final eDate = DateTime.tryParse(e['date']?.toString() ?? '');
+            if (eDate == null) return false;
+            return eDate.isAfter(now);
+          }).length;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch events: $e");
+      }
+
+      // 12. Fetch CGPA
+      double currentCgpa = 0.0;
+      try {
+        final cgpaRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/cgpa/$rollNo"));
+        if (cgpaRes.statusCode == 200) {
+          final data = jsonDecode(cgpaRes.body);
+          final List sems = data['semesters'] ?? [];
+          double totalGradePoints = 0.0;
+          int totalCreditsCount = 0;
+          for (final sem in sems) {
+            final gpa = ((sem['gpa'] ?? 0.0) as num).toDouble();
+            final creds = ((sem['credits'] ?? 0) as num).toInt();
+            totalGradePoints += gpa * creds;
+            totalCreditsCount += creds;
+          }
+          currentCgpa = totalCreditsCount == 0 ? 0.0 : totalGradePoints / totalCreditsCount;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch CGPA: $e");
+      }
+
+      // 13. Fetch Achievements
+      int unlockedAchievements = 0;
+      try {
+        final achRes = await http.get(Uri.parse("${ApiService.baseUrl}/api/achievements/$rollNo"));
+        if (achRes.statusCode == 200) {
+          final data = jsonDecode(achRes.body);
+          final List badges = data['badges'] ?? [];
+          unlockedAchievements = badges.where((b) => b['unlocked'] == true).length;
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch achievements: $e");
+      }
+
       if (mounted) {
         setState(() {
           _todaySessions = sessions;
@@ -224,6 +354,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _attendanceRecords = attData;
           _upcomingHolidays = upcomingHols;
           _upcomingExams = upcomingExs;
+          _pendingAssignmentsCount = pendingAssignments;
+          _totalNotesCount = notesList.length;
+          _todayStudyGoalsCount = studyGoalsTotal;
+          _todayStudyGoalsCompleted = studyGoalsCompleted;
+          _studyGoalsCompletion = goalsCompletion;
+          _upcomingExamsCount = upcomingExs.length;
+          _totalNoticesCount = noticesList.length;
+          _latestNoticeTitle = noticesList.isNotEmpty ? noticesList.first['title']?.toString() ?? "No Notice" : "No Notice";
+          _pendingTasksCount = pendingTasks;
+          _latestNotices = noticesList;
+          _recentNotes = notesList;
+          _upcomingEventsCount = upcomingEvents;
+          _currentCgpa = currentCgpa;
+          _unlockedAchievementsCount = unlockedAchievements;
           _loadingDateData = false;
         });
       }
@@ -580,21 +724,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : name.trim().split(' ').first;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Attendance Manager'),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () => Navigator.pushNamed(context, '/alerts'),
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () => Navigator.pushNamed(context, '/profile-menu'),
-            icon: const Icon(Icons.account_circle_outlined),
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -614,7 +743,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 18),
             _AttendanceHero(attendance: attendance, target: target, safe: safe),
             
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
+            
+            // Quick Action Buttons (Quick Stats)
+            Text(
+              'Quick Stats',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                int crossAxisCount = 2; // Default for mobile
+                if (constraints.maxWidth >= 900) {
+                  crossAxisCount = 4; // Desktop
+                } else if (constraints.maxWidth >= 600) {
+                  crossAxisCount = 2; // Tablet
+                }
+                
+                final double cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 12) / crossAxisCount;
+                const double cardHeight = 130; // Max height requirement
+                final double aspectRatio = cardWidth / cardHeight;
+
+                return GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: aspectRatio,
+                  children: [
+                    _QuickActionCard(
+                      title: "Assignments",
+                      count: "$_pendingAssignmentsCount",
+                      status: "Pending",
+                      icon: Icons.assignment_rounded,
+                      gradient: const [Color(0xFFE94057), Color(0xFF8A2387)],
+                      onTap: () => Navigator.pushNamed(context, "/assignments").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "Notes Hub",
+                      count: "$_totalNotesCount",
+                      status: "Uploaded",
+                      icon: Icons.menu_book_rounded,
+                      gradient: const [Color(0xFF2193b0), Color(0xFF6dd5ed)],
+                      onTap: () => Navigator.pushNamed(context, "/notes-manager").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "Study Planner",
+                      count: "$_todayStudyGoalsCompleted/$_todayStudyGoalsCount",
+                      status: "Goals Met",
+                      icon: Icons.track_changes_rounded,
+                      gradient: const [Color(0xFF11998e), Color(0xFF38ef7d)],
+                      onTap: () => Navigator.pushNamed(context, "/study-planner").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "Exams",
+                      count: "$_upcomingExamsCount",
+                      status: "Scheduled",
+                      icon: Icons.school_rounded,
+                      gradient: const [Color(0xFFff9966), Color(0xFFff5e62)],
+                      onTap: () => Navigator.pushNamed(context, "/exams").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "Tasks",
+                      count: "$_pendingTasksCount",
+                      status: "Pending",
+                      icon: Icons.check_circle_rounded,
+                      gradient: const [Color(0xFF00c6ff), Color(0xFF0072ff)],
+                      onTap: () => Navigator.pushNamed(context, "/task-manager").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "Events",
+                      count: "$_upcomingEventsCount",
+                      status: "Upcoming",
+                      icon: Icons.event_rounded,
+                      gradient: const [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+                      onTap: () => Navigator.pushNamed(context, "/event-manager").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "CGPA",
+                      count: _currentCgpa.toStringAsFixed(2),
+                      status: "Current",
+                      icon: Icons.insights_rounded,
+                      gradient: const [Color(0xFFF3904F), Color(0xFF3B4371)],
+                      onTap: () => Navigator.pushNamed(context, "/cgpa-tracker").then((_) => _load()),
+                    ),
+                    _QuickActionCard(
+                      title: "Achievements",
+                      count: "$_unlockedAchievementsCount",
+                      status: "Badges Unlocked",
+                      icon: Icons.emoji_events_rounded,
+                      gradient: const [Color(0xFFf12711), Color(0xFFf5af19)],
+                      onTap: () => Navigator.pushNamed(context, "/achievements").then((_) => _load()),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 14),
             
             // 1. Date Picker Row
             Card(
@@ -911,7 +1137,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   : timetableFile,
               route: '/timetable-upload',
             ),
+            const SizedBox(height: 22),
+
+            // Latest Notices Cards
+            if (_latestNotices.isNotEmpty) ...[
+              Text(
+                'Latest Notices',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              ..._latestNotices.take(2).map((n) {
+                final title = n['title']?.toString() ?? '';
+                final cat = n['category']?.toString() ?? 'Notice';
+                final isPinned = n['isPinned'] == true;
+                return Card(
+                  color: isPinned ? const Color(0xFF1E3252) : const Color(0xFF13233D),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: Icon(isPinned ? Icons.push_pin : Icons.campaign_rounded, color: isPinned ? Colors.orange : const Color(0xFF00BFA5)),
+                    title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text(cat, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+
+            // Recent Notes Cards
+            if (_recentNotes.isNotEmpty) ...[
+              Text(
+                'Recent Notes',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              ..._recentNotes.take(2).map((n) {
+                final title = n['title']?.toString() ?? '';
+                final subject = n['subject']?.toString() ?? 'Notes';
+                return Card(
+                  color: const Color(0xFF13233D),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const Icon(Icons.description_rounded, color: Colors.purpleAccent),
+                    title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text(subject, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionBtn(IconData icon, String label, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 16, color: Colors.white),
+        label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF13233D),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
     );
@@ -1076,6 +1366,107 @@ class _SemesterTile extends StatelessWidget {
         subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: () => Navigator.pushNamed(context, route),
+      ),
+    );
+  }
+}
+
+class _QuickActionCard extends StatefulWidget {
+  final String title;
+  final String count;
+  final String status;
+  final IconData icon;
+  final List<Color> gradient;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.title,
+    required this.count,
+    required this.status,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  State<_QuickActionCard> createState() => _QuickActionCardState();
+}
+
+class _QuickActionCardState extends State<_QuickActionCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: _isHovered ? (Matrix4.identity()..translate(0, -3, 0)) : Matrix4.identity(),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: widget.gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _isHovered
+                ? [BoxShadow(color: widget.gradient.last.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 4))]
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2))],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: widget.onTap,
+              splashColor: Colors.white24,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Top Row: Icon + Arrow
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(widget.icon, color: Colors.white, size: 22),
+                        const Icon(Icons.arrow_forward_rounded, color: Colors.white70, size: 14),
+                      ],
+                    ),
+                    // Middle: Title
+                    Text(
+                      widget.title,
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // Bottom Row: Count + Status text
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          widget.count,
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                        ),
+                        Flexible(
+                          child: Text(
+                            widget.status,
+                            style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

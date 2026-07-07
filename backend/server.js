@@ -16,6 +16,7 @@ const timetableRoutes =
 
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 app.post(
   "/api/test-ai",
@@ -55,6 +56,20 @@ app.use("/", require("./routes/alertRoutes"));
 app.use("/", require("./routes/apiRoutes"));
 app.use("/", require("./routes/attendanceRoutes"));
 app.use("/", require("./routes/calendarRoutes"));
+
+// Smart Student Productivity Platform new module routes
+app.use("/", require("./routes/subjectRoutes"));
+app.use("/", require("./routes/assignmentRoutes"));
+app.use("/", require("./routes/studyPlanRoutes"));
+app.use("/", require("./routes/notesRoutes"));
+app.use("/", require("./routes/cgpaRoutes"));
+app.use("/", require("./routes/reminderRoutes"));
+app.use("/", require("./routes/noticeRoutes"));
+app.use("/", require("./routes/eventRoutes"));
+app.use("/", require("./routes/fileRoutes"));
+app.use("/", require("./routes/taskRoutes"));
+app.use("/", require("./routes/achievementRoutes"));
+app.use("/", require("./routes/analyticsRoutes"));
 
 app.use(
   "/api",

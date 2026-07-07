@@ -11,6 +11,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  bool _obscureSignupPassword = true;
   final nameController = TextEditingController();
   final rollController = TextEditingController();
   final passwordController = TextEditingController();
@@ -112,11 +113,24 @@ class _SignupScreenState extends State<SignupScreen> {
               decoration: const InputDecoration(labelText: "Roll Number"),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Password"),
-            ),
+             TextField(
+               controller: passwordController,
+               obscureText: _obscureSignupPassword,
+               decoration: InputDecoration(
+                 labelText: "Password",
+                 suffixIcon: IconButton(
+                   icon: Icon(
+                     _obscureSignupPassword ? Icons.visibility : Icons.visibility_off,
+                     color: Colors.grey,
+                   ),
+                   onPressed: () {
+                     setState(() {
+                       _obscureSignupPassword = !_obscureSignupPassword;
+                     });
+                   },
+                 ),
+               ),
+             ),
             const SizedBox(height: 12),
             TextField(
               controller: branchController,

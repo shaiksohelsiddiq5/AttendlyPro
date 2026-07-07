@@ -55,6 +55,35 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  // New profile fields
+  photo: {
+    type: String,
+    default: "",
+  },
+  skills: {
+    type: [String],
+    default: [],
+  },
+  semester: {
+    type: String,
+    default: "",
+  },
+  section: {
+    type: String,
+    default: "",
+  },
+  phone: {
+    type: String,
+    default: "",
+  },
+  email: {
+    type: String,
+    default: "",
+  },
+  resume: {
+    type: String,
+    default: "",
+  },
 });
 
 module.exports = mongoose.model(

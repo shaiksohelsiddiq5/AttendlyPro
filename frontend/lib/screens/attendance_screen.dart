@@ -179,7 +179,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF081B3A),
-      appBar: AppBar(title: const Text("Attendance Manager")),
       floatingActionButton: FloatingActionButton(
         onPressed: addSubject,
         child: const Icon(Icons.add),
