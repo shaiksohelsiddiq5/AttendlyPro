@@ -313,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFF081B3A),
+        backgroundColor: const Color(0xFF0A1931),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -321,9 +321,9 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  "📚 My Attendance Manager",
+                  "📚 My Attendly pro",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 255, 255, 255),
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
